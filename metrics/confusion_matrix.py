@@ -3,11 +3,11 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-from metric import Metric
+from .metric import Metric
 
 class ConfusionMatrix(Metric):
     def __init__(self, classes):
-        super(ConfusionMatrix, self)__init__(len(classes))
+        super(ConfusionMatrix, self).__init__(len(classes))
         self.classes = classes
 
     def reset(self):

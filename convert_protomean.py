@@ -1,5 +1,5 @@
 
-import find_caffe
+import frameworks.find_caffe
 import caffe
 import numpy as np
 import sys

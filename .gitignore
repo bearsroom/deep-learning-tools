@@ -1,2 +1,5 @@
 # backup file
 backup/
+
+# all pyc file
+*.pyc

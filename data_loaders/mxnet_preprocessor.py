@@ -1,5 +1,5 @@
 
-import find_mxnet
+import frameworks.find_mxnet
 import mxnet as mx
 import logging
 import numpy as np
@@ -13,7 +13,6 @@ import logging
 
 class MXNetPreprocessor:
     def __init__(self, mean_img_file, crop_mode='center', data_shape=(3, 224, 224)):
-        super(MXNetPreprocessor, self).__init__()
         self.mean_img = mx.nd.load(mean_img_file)['mean_img'].asnumpy()
         self.crop_mode = crop_mode
         self.data_shape = data_shape

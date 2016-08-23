@@ -1,2 +1,0 @@
-MXNET_PATH /home/liyinghong/mxnet-augmented/python
-CAFFE_PATH /home/liyinghong/caffe-master/python

@@ -1,10 +1,10 @@
 
 import numpy as np
-from metrics import Metric
+from .metric import Metric
 
 class F1(Metric):
     def __init__(self, num_classes):
-        self.num_classes = num_classes
+        super(F1, self).__init__(num_classes)
         self.reset()
 
     def reset(self):
@@ -38,7 +38,7 @@ class F1(Metric):
 
 class RecallTopK(Metric):
     def __init__(self, num_classes, top_k):
-        super(RecallTopK, self)__init__(num_classe)
+        super(RecallTopK, self).__init__(num_classes)
         self.top_k = top_k
 
     def reset(self):

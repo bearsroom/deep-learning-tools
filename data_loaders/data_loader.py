@@ -29,8 +29,8 @@ class BatchLoader():
         self.lock = Lock()
         for idx in range(num_preprocessor):
             p = Process(target=preprocess_worker,
-                        args=(idx, im_proc_list[idx], data_dir, mean_img_file, self.que, self.lock, gt_mode),
-                        kwargs=(dict(gt_mode=gt_mode, data_shape=data_shape, framework=framework, crop_mode=crop_mode)))
+                        args=(idx, im_proc_list[idx], data_dir, mean_img_file, self.que, self.lock),
+                        kwargs={'gt_mode': gt_mode, 'data_shape': data_shape, 'framework': framework, 'crop_mode' :crop_mode})
             p.daemon = True
             self.processes.append(p)
 

@@ -1,7 +1,7 @@
 
 import numpy as np
 
-class Metric:
+class Metric(object):
     def __init__(self, num_classes):
         self.num_classes = num_classes
         self.reset()
@@ -22,7 +22,7 @@ class Metric:
 class Accuracy(Metric):
     def __init__(self, num_classes):
         super(Accuracy, self).__init__(num_classes)
-        self.reset():
+        self.reset()
 
     def reset(self):
         self.tp = 0

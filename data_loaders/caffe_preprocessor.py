@@ -1,17 +1,17 @@
 
-import find_caffe
+import frameworks.find_caffe
 import caffe
-import mu
+import numpy as np
 
 
 class CaffePreprocessor:
     def __init__(self, mean_npy, crop_mode='center', data_shape=(3, 224, 224)):
-        super(CaffePreprocessor, self).__init__()
         self._init_transformer(mean_npy, data_shape)
         self.crop_mode = crop_mode
 
-    def init_transformer(mean_npy, data_shape):
+    def _init_transformer(self, mean_npy, data_shape):
         mu = np.load(mean_npy)
+        data_shape = (1, data_shape[0], data_shape[1], data_shape[2])
         self.transformer = caffe.io.Transformer({'data': data_shape})
         self.transformer.set_transpose('data', (2, 0, 1))
         self.transformer.set_mean('data', mu)

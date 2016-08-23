@@ -1,9 +1,10 @@
 
 import logging
 import os, sys
+import time
 
 
-def load_model(model_params, batch_size, classes, gpu_id):
+def load_model(proc_id, model_params, batch_size, classes, gpu_id, framework='mxnet'):
     """ model_params: dict, keys = ('model_prefix', 'num_epoch') if load mxnet model
         keys = ('prototxt', 'caffemodel') if load caffe model"""
 
@@ -13,16 +14,16 @@ def load_model(model_params, batch_size, classes, gpu_id):
             predictor = MXNetPredictor(model_params['model_prefix'], model_params['num_epoch'], batch_size, classes, gpu_id)
             return predictor
         except KeyError, e:
-            logging.error('Predictor #{} failed to load mxnet model: {}'.format(e))
+            logging.error('Predictor #{} failed to load mxnet model: {}'.format(proc_id, e))
             return None
 
     elif framework.lower() == 'caffe':
         from .caffe_predictor import CaffePredictor
         try:
-            predictor = CaffePredictor(model_params['prototxt'], model_params['model_params'], batch_size, classes, gpu_id)
+            predictor = CaffePredictor(model_params['prototxt'], model_params['caffemodel'], batch_size, classes, gpu_id)
             return predictor
         except KeyError, e:
-            logging.error('Predictor #{} failed to load caffe model: {}'.format(e))
+            logging.error('Predictor #{} failed to load caffe model: {}'.format(proc_id, e))
             return None
 
 
@@ -31,11 +32,12 @@ def predict_worker(proc_id, output_file, classes, model_params, batch_size, que,
         if evaluate, will evaluate recall, precision, f1_score and recall_top5 """
 
     logging.info('Predictor #{}: Loading model...'.format(proc_id))
-    model = load_model(model_params, batch_size, gpu_id)
+    model = load_model(proc_id, model_params, batch_size, classes, gpu_id, framework=framework)
     if model is None:
         que.put('Error')
         raise ValueError('No model created! Exit')
-    logging.info('Model loaded')
+    logging.info('Predictor #{}: Model loaded'.format(proc_id))
+    que.put('OK')
 
     if evaluate:
         from metrics import F1, ConfusionMatrix, MisClassified, RecallTopK
@@ -49,18 +51,17 @@ def predict_worker(proc_id, output_file, classes, model_params, batch_size, que,
     start = time.time()
     while True:
         # get a batch from data loader via a queue
-        try:
-            lock.acquire()
-            batch = que.get()
-            lock.release()
+        lock.acquire()
+        batch = que.get()
+        lock.release()
         if batch == 'FINISH':
             logging.info('Predictor #{} has received all batches, exit'.format(proc_id))
             break
 
         # predict
         im_names, batch, gt_list = batch
-        pred, prob = predictor.predict(batch)
-        pred_labels, top_probs = predictor.get_label_prob(top_k=5)
+        pred, prob = model.predict(batch)
+        pred_labels, top_probs = model.get_label_prob(top_k=5)
 
         # write prediction to file
         for im_name, label, top_prob in zip(im_names, pred_labels, top_probs):
@@ -87,7 +88,6 @@ def predict_worker(proc_id, output_file, classes, model_params, batch_size, que,
             elapsed = time.time() - start
             logging.info('Predictor #{}: Tested {} batches, elapsed {}s'.format(proc_id, batch_idx, elapsed))
 
-    f.close()
 
     # evaluation after prediction if set
     if evaluate:
@@ -116,5 +116,6 @@ def predict_worker(proc_id, output_file, classes, model_params, batch_size, que,
         cm.normalize()
         plt_name = output_file+'_cm.jpg'
         cm.draw(plt_name)
+    f.close()
 
 
