@@ -17,7 +17,6 @@ import signal
 
 processes = []
 pid = None
-BATCH_SIZE = 200
 NUM_PREPROCESSOR = 4
 
 

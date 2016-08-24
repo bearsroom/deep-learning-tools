@@ -32,7 +32,7 @@ python test_caffe_model.py \
 --prototxt=/home/liyinghong/data/caffe_db/deploy_googlenet.prototxt \
 --caffemodel=/home/liyinghong/data/caffe_db/bvlc_googlenet_iter_35000.caffemodel \
 --mean-img=/home/liyinghong/data/caffe_db/landscape/landscape-val/mean.npy \
---gpus=3 \
+--gpus=0 \
 --classes=/home/liyinghong/data/classify_200_mxnet/db_meta/"$subset_class"/"$subset_class"_classes.txt \
 --output-prefix=inception_bn_20160823_test_log_"$subset_class" \
 --eval \

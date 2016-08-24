@@ -18,7 +18,6 @@ import signal
 
 processes = []
 pid = None
-BATCH_SIZE = 200
 NUM_PREPROCESSOR = 4
 
 
@@ -107,7 +106,7 @@ def parse_args():
     parser.add_argument('--output-prefix', dest='output_prefix', required=True,
                         help='Output file prefix, results will be stored in [output_prefix]_results.x where x a number',
                         default=None, type=str)
-    parser.add_argument('--batch-size', help='Batch size', default=200, type=int)
+    parser.add_argument('--batch-size', help='Batch size', default=100, type=int)
     parser.add_argument('--data-shape', help='Data shape (height, width), height = width', default=224, type=int)
 
     if len(sys.argv) == 1:
