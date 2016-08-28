@@ -1,12 +1,13 @@
 
 import sys
-sys.path.insert(0, '..')
+import os
+cwd = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(cwd, '..'))
 import frameworks.find_mxnet
 import mxnet as mx
 import logging
 import numpy as np
 import argparse
-import os
 import time
 import logging
 from multiprocessing import Process, Queue, Lock
@@ -35,12 +36,13 @@ def test(im_list, data_dir, mean_img_file, model_params, output_prefix, classes,
     assert len(im_list) > 0
 
     data_que_list = [Queue()]
+    status_que = Queue()
     lock = Lock()
     # predict_worker
     logging.info('Initializing {} predictor...'.format(len(gpus)))
     for idx, gpu_id in enumerate(gpus):
         p = Process(target=predict_worker,
-                    args=(idx, output_prefix+'_results.'+str(idx), classes, model_params, batch_size, data_que_list[0], lock),
+                    args=(idx, output_prefix+'_results.'+str(idx), classes, model_params, batch_size, data_que_list[0], lock, status_que),
                     kwargs={'gpu_id': gpu_id, 'evaluate': evaluate, 'framework': 'mxnet'})
         p.daemon = True
         p.start()
@@ -48,8 +50,8 @@ def test(im_list, data_dir, mean_img_file, model_params, output_prefix, classes,
 
     # make sure at leaset one predictor is available
     available = 0
-    for idx, que in enumerate(data_que_list):
-        status = que.get()
+    for _ in enumerate(gpus):
+        status = status_que.get()
         if status == 'OK':
             available += 1
     if available == 0:
@@ -120,7 +122,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     FORMAT = "%(asctime)s %(levelname)s %(process)d %(message)s"
-    logging.basicConfig(format=FORMAT, level=logging.INFO, filename=None)
+    logging.basicConfig(format=FORMAT, level=logging.DEBUG, filename=None)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -138,5 +140,4 @@ if __name__ == '__main__':
         if args.evaluate:
             logging.fatal('FATAL: currently evaluation mode does NOT support multi-gpu, exit')
             sys.exit(1)
-        model_list = model_list * len(args.gpus)
     test(im_list, args.data_dir, args.mean_img, model_params, args.output_prefix, classes, args.batch_size, args.gpus, evaluate=args.evaluate)

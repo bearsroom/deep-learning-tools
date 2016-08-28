@@ -2,6 +2,7 @@
 import logging
 import os, sys
 import time
+import numpy as np
 
 
 def load_model(proc_id, model_params, batch_size, classes, gpu_id, framework='mxnet'):
@@ -12,8 +13,15 @@ def load_model(proc_id, model_params, batch_size, classes, gpu_id, framework='mx
         from .mxnet_predictor import MXNetPredictor
         try:
             predictor = MXNetPredictor(model_params['model_prefix'], model_params['num_epoch'], batch_size, classes, gpu_id)
+            # warm up with a dummy batch
+            #logging.info('Warm up')
+            #dummy = np.random.random((batch_size, 3, 224, 224))
+            #prob = predictor.predict(dummy)
+            #logging.info('a dummy batch went through')
+            #if not isinstance(prob, np.ndarray):
+            #    raise ValueError('Error when loading model')
             return predictor
-        except KeyError, e:
+        except (KeyError, ValueError) as e:
             logging.error('Predictor #{} failed to load mxnet model: {}'.format(proc_id, e))
             return None
 
@@ -27,17 +35,17 @@ def load_model(proc_id, model_params, batch_size, classes, gpu_id, framework='mx
             return None
 
 
-def predict_worker(proc_id, output_file, classes, model_params, batch_size, que, lock, gpu_id=0, evaluate=True, framework='mxnet'):
+def predict_worker(proc_id, output_file, classes, model_params, batch_size, que, lock, status_que, gpu_id=0, evaluate=True, framework='mxnet'):
     """ get data from batch loader and make predictions, predictions will be saved in output_file
         if evaluate, will evaluate recall, precision, f1_score and recall_top5 """
 
     logging.info('Predictor #{}: Loading model...'.format(proc_id))
     model = load_model(proc_id, model_params, batch_size, classes, gpu_id, framework=framework)
     if model is None:
-        que.put('Error')
+        status_que.put('Error')
         raise ValueError('No model created! Exit')
     logging.info('Predictor #{}: Model loaded'.format(proc_id))
-    que.put('OK')
+    status_que.put('OK')
 
     if evaluate:
         from metrics import F1, ConfusionMatrix, MisClassified, RecallTopK
@@ -48,6 +56,7 @@ def predict_worker(proc_id, output_file, classes, model_params, batch_size, que,
 
     f = open(output_file, 'w')
     batch_idx = 0
+    logging.info('Predictor #{} starts'.format(proc_id))
     start = time.time()
     while True:
         # get a batch from data loader via a queue
@@ -60,6 +69,7 @@ def predict_worker(proc_id, output_file, classes, model_params, batch_size, que,
 
         # predict
         im_names, batch, gt_list = batch
+        logging.debug('Predictor #{}: predict'.format(proc_id))
         pred, prob = model.predict(batch)
         pred_labels, top_probs = model.get_label_prob(top_k=5)
 
@@ -86,7 +96,7 @@ def predict_worker(proc_id, output_file, classes, model_params, batch_size, que,
         batch_idx += 1
         if batch_idx % 50 == 0 and batch_idx != 0:
             elapsed = time.time() - start
-            logging.info('Predictor #{}: Tested {} batches, elapsed {}s'.format(proc_id, batch_idx, elapsed))
+            logging.info('Predictor #{}: Tested {} batches of {} images, elapsed {}s'.format(proc_id, batch_idx, batch_size, elapsed))
 
 
     # evaluation after prediction if set
