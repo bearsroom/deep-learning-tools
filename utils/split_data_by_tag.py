@@ -44,6 +44,7 @@ def split_by_tag(tag_dict, im_list, filter_thresh=True, mode=None, topk=None):
             else:
                 if topk and type(topk) is int:
                     probs = probs[:topk]
+                    tags = tags[:topk]
                 for tag, prob in zip(tags, probs):
                     if tag in tag_dict.keys():
                         if filter_thresh:
@@ -146,7 +147,7 @@ def parse_args():
                         help='Image list to perform intersection with [im_list]')
     parser.add_argument('--thresh-bound', action='store_true',
                         help='Bound output images\' probs in intervals')
-    parser.add_argument('--not-filter', action='store_false',
+    parser.add_argument('--not-filter', action='store_true',
                         help='Not to filter with threshold')
     parser.add_argument('--top1', action='store_true', help='Only pick top 1 prediction')
 
