@@ -37,7 +37,7 @@ def split_by_tag(tag_dict, im_list, filter_thresh=True, mode=None, topk=None):
                 for tag, prob in zip(tags, probs):
                     if tag in tag_dict.keys():
                         key = tag if mode == 'fp' else gt_tag
-                        if filter_thresh and float(prob) > tag_dict[tag]:
+                        if filter_thresh and prob > tag_dict[tag]:
                             im_tag_dict[key].append((im_name, tag, prob, gt_tag, gt_prob))
                         elif not filter_thresh:
                             im_tag_dict[key].append((im_name, tag, prob, gt_tag, gt_prob))
@@ -48,9 +48,9 @@ def split_by_tag(tag_dict, im_list, filter_thresh=True, mode=None, topk=None):
                 for tag, prob in zip(tags, probs):
                     if tag in tag_dict.keys():
                         if filter_thresh:
-                            if type(tag_dict[tag]) is list and float(prob) > tag_dict[tag][0] and float(prob) <= tag_dict[tag][1]:
+                            if type(tag_dict[tag]) is list and prob > tag_dict[tag][0] and prob <= tag_dict[tag][1]:
                                 im_tag_dict[tag].append((im_name, tag, prob))
-                            elif float(prob) > tag_dict[tag]:
+                            elif prob > tag_dict[tag]:
                                 im_tag_dict[tag].append((im_name, tag, prob))
                         else:
                             im_tag_dict[tag].append((im_name, tag, prob))
@@ -85,6 +85,7 @@ def parse_line(line, mode=None):
         im_name = data[0]
         labels = data[1].split(':')[-1].split(',')
         probs = data[2].split(':')[-1].split(',')
+    probs = [float(p) for p in probs]
     return (im_name, labels, probs)
 
 
@@ -149,7 +150,7 @@ def parse_args():
                         help='Bound output images\' probs in intervals')
     parser.add_argument('--not-filter', action='store_true',
                         help='Not to filter with threshold')
-    parser.add_argument('--top1', action='store_true', help='Only pick top 1 prediction')
+    parser.add_argument('--topk', default=None, type=int, help='Only pick top k prediction')
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -161,12 +162,11 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     filter_thresh = not args.not_filter
-    topk = 1 if args.top1 else None
 
     if args.fp_mode:
-        main(args.im_list, args.tags, args.output_prefix, args.intersect, 'fp', filter_thresh, args.thresh_bound, topk)
+        main(args.im_list, args.tags, args.output_prefix, args.intersect, 'fp', filter_thresh, args.thresh_bound, args.topk)
     elif args.fn_mode:
-        main(args.im_list, args.tags, args.output_prefix, args.intersect, 'fn', filter_thresh, args.thresh_bound, topk)
+        main(args.im_list, args.tags, args.output_prefix, args.intersect, 'fn', filter_thresh, args.thresh_bound, args.topk)
     else:
-        main(args.im_list, args.tags, args.output_prefix, args.intersect, filter_thresh=filter_thresh, thresh_bound=args.thresh_bound, topk=topk)
+        main(args.im_list, args.tags, args.output_prefix, args.intersect, filter_thresh=filter_thresh, thresh_bound=args.thresh_bound, topk=args.topk)
 

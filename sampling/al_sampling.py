@@ -15,7 +15,7 @@ min_max_sampling: pick x : max(x) = min(max(x)), max(x) = p(y_top1|x)
 """
 
 
-def entropy(candidates):
+def entropy(probs):
     return -np.sum(probs * np.log(probs), axis=1)
 
 
@@ -29,20 +29,7 @@ def entropy_sampling(candidates, ratio=0.2):
     return indexes[:num_pick]
 
 
-def entropy_sampling_each_class(candidates, pred, ratio=0.2):
-    """ pick ratio * candidates(pred).shape[0] samples for each class """
-    num_classes = int(np.max(pred)) + 1
-    indexes = np.empty((0, ), dtype=np.int)
-    for class_id in range(num_classes):
-        pred_indexes = np.where(pred == class_id)[0]
-        if pred_indexes.shape[0] > 1:
-            pred_candidates = candidates[pred_indexes]
-            pred_indexes = pred_indexes[entropy_sampling(pred_candidates, ratio=ratio)]
-        indexes = np.hstack(indexes, pred_indexes)
-    return indexes
-
-
-def margin_top1_top2(candidates):
+def margin_top1_top2(probs):
     assert probs.shape[0] >= 2
     probs_sort = np.sort(probs, axis=1)[:,::-1]
     return probs[:, 0] - probs[:, 1]
@@ -56,38 +43,12 @@ def margin_sampling(candidates, ratio=0.2):
     return indexes[:num_pick]
 
 
-def margin_sampling_each_class(candidates, pred, ratio=0.2):
-    """ pick ratio * candidates(pred).shape[0] samples for each class """
-    num_classes = int(np.max(pred)) + 1
-    indexes = np.empty((0, ), dtype=np.int)
-    for class_id in range(num_classes):
-        pred_indexes = np.where(pred == class_id)[0]
-        if pred_indexes.shape[0] > 1:
-            pred_candidates = candidates[pred_indexes]
-            pred_indexes = pred_indexes[margin_sampling(pred_candidates, ratio=ratio)]
-        indexes = np.hstack(indexes, pred_indexes)
-    return indexes
-
-
 def min_max_sampling(candidates, ratio=0.2):
     """ pick ratio * candidates.shape[0] samples according to argmin(max(prob)) for each instance """
     max_probs = np.max(candidates, axis=1)
     indexes = np.argsort(max_probs)
     num_pick = int(np.ceil(ratio * candidates.shape[0]))
     return indexes[:num_pick]
-
-
-def min_max_sampling_each_class(candidates, pred, ratio=0.2):
-    """ pick ratio * candidates(pred).shape[0] samples for each class """
-    num_classes = int(np.max(pred)) + 1
-    indexes = np.empty((0, ), dtype=np.int)
-    for class_id in range(num_classes):
-        pred_indexes = np.where(pred == class_id)[0]
-        if pred_indexes.shape[0] > 1:
-            pred_candidates = candidates[pred_indexes]
-            pred_indexes = pred_indexes[min_max_sampling(pred_candidates, ratio=ratio)]
-        indexes = np.hstack(indexes, pred_indexes)
-    return indexes
 
 
 def parse_args():

@@ -31,6 +31,17 @@ def signal_handler(signum, frame):
     sys.exit()
 
 
+def random_pick(im_list, num_images):
+    out_list = []
+    ratio = num_images / float(len(im_list))
+    for im in im_list:
+        if np.random.rand() < ratio:
+            out_list.append(im)
+        if len(out_list) >= num_images:
+            break
+    return out_list
+
+
 def test(im_list, data_dir, mean_img_file, model_params, output_prefix, classes, batch_size, gpus, data_shape=(3, 224, 224), evaluate=False):
     global processes
     assert len(im_list) > 0
@@ -108,6 +119,8 @@ def parse_args():
                         help='Output file prefix, results will be stored in [output_prefix]_results.x where x a number',
                         default=None, type=str)
     parser.add_argument('--batch-size', help='Batch size', default=200, type=int)
+    parser.add_argument('--num-images', default=None, type=int,
+                        help='Number of images to test, if set, will randomly take num_images images to test')
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -131,6 +144,11 @@ if __name__ == '__main__':
     classes = open(args.classes).read().splitlines()
     # classes list format: int_label class_name class_thresh
     classes = [c.split()[1].strip() for c in classes]
+
+    if args.num_images:
+        logging.info('--num-images is set, will randomly pick {} images to test'.format(args.num_images))
+        im_list = random_pick(im_list, args.num_images)
+
     logging.info('Test {} images, {} classes'.format(len(im_list), len(classes)))
 
     model_params = {'model_prefix': args.model_prefix, 'num_epoch': args.num_epoch}
