@@ -72,21 +72,24 @@ def intersect_dict(im_tag_dict, intersect_list):
 
 
 def parse_line(line, mode=None):
-    data = line.split()
-    if mode in ('fp', 'fn'):
-        im_name = data[0]
-        preds = data[1].split(':')[-1].split(',')
-        pred_probs = data[2].split(':')[-1].split(',')
-        gt = data[3].split(':')[-1]
-        gt_prob = data[4].split(':')[-1]
-        labels = preds + [gt]
-        probs = pred_probs + [gt_prob]
-    else:
-        im_name = data[0]
-        labels = data[1].split(':')[-1].split(',')
-        probs = data[2].split(':')[-1].split(',')
-    probs = [float(p) for p in probs]
-    return (im_name, labels, probs)
+    try:
+        data = line.split()
+        if mode in ('fp', 'fn'):
+            im_name = data[0]
+            preds = data[1].split(':')[-1].split(',')
+            pred_probs = data[2].split(':')[-1].split(',')
+            gt = data[3].split(':')[-1]
+            gt_prob = data[4].split(':')[-1]
+            labels = preds + [gt]
+            probs = pred_probs + [gt_prob]
+        else:
+            im_name = data[0]
+            labels = data[1].split(':')[-1].split(',')
+            probs = data[2].split(':')[-1].split(',')
+        probs = [float(p) for p in probs]
+        return (im_name, labels, probs)
+    except Exception:
+        return None
 
 
 def main(im_list_file, tag_id_list_file, output_prefix, intersect=None, mode=None, filter_thresh=True, thresh_bound=False, topk=None):

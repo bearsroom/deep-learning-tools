@@ -5,16 +5,17 @@ import argparse
 from split_data_by_tag import parse_line, create_tag_dict
 
 
-def parse_gt_list(gt_list):
-    gt_list = [gt.split() for gt in gt_list]
+def parse_gt_list(gt_list, tag_list):
     gt_dict = {}
     for gt in gt_list:
-        im_name = gt[0]
-        cls = gt[1]
-        if cls not in gt_dict.keys():
-            gt_dict[cls] = [im_name]
-        else:
-            gt_dict[cls].append(im_name)
+        for tag in tag_list:
+            if tag in gt:
+                im_name = gt.split()[0]
+                if tag not in gt_dict.keys():
+                    gt_dict[tag] = [im_name]
+                else:
+                    gt_dict[tag].append(im_name)
+
     return gt_dict
 
 
@@ -80,6 +81,8 @@ def top_k_classes(gt_dict, pred_dict):
 def test(im_list_file, gt_list_file, tag_id_list_file, filter_thresh=False, top_k=3):
     im_list = open(im_list_file).read().splitlines()
     im_list = [parse_line(im) for im in im_list]
+    im_list = [im for im in im_list if im]
+
     num_images = len(im_list)
     print('Total {} images in dataset'.format(num_images))
 
@@ -90,7 +93,7 @@ def test(im_list_file, gt_list_file, tag_id_list_file, filter_thresh=False, top_
     im_tag_dict = count_top_k(tag_dict, im_list, filter_thresh=filter_thresh, top_k=top_k)
 
     gt_list = open(gt_list_file).read().splitlines()
-    gt_dict = parse_gt_list(gt_list)
+    gt_dict = parse_gt_list(gt_list, tag_dict.keys())
 
     recall = top_k_recall(gt_dict, im_tag_dict)
     top_classes = top_k_classes(gt_dict, im_tag_dict)
