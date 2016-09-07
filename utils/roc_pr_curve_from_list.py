@@ -11,58 +11,57 @@ import numpy as np
 import math
 
 
-def draw_roc_curve(tag_list, rec_thresh, fpr_thresh, output, title=None, min_recall=None):
-    num_tags = len(tag_list)
-    colormap = plt.cm.gist_ncar
-    plt.gca().set_color_cycle([colormap(i) for i in np.linspace(0, 0.9, num_tags)])
-    for tag in tag_list:
-        recall = rec_thresh[tag]
-        fpr = fpr_thresh[tag]
-        plt.plot(fpr, recall, label=tag)
-        points = [(f, r) for f, r in zip(fpr, recall)]
-        points = sorted(points, key = lambda p: p[0])
-        best_point = get_best_point(points, y_lower_bound=min_recall)
-        plt.scatter(best_point[0], best_point[1])
-        plt.annotate('(%.4f, %.4f)' % (best_point[0], best_point[1]), xy=best_point)
-    if title:
-        plt.title('ROC Curve -' + title)
-    else:
-        plt.title('ROC Curve')
-    plt.xlabel('FPR')
-    plt.ylabel('TPR')
-    plt.axis([0, 1.0, 0, 1.0])
-    plt.grid()
-    plt.legend(loc='best')
-    plt.savefig(output, format='jpg')
-    plt.clf()
-    print('Save roc curve to {}'.format(output))
+def draw_one_curve(subplt, x, y, legend, scatter_points=None):
+    subplt.plot(x, y, label=legend)
+    if scatter_points:
+        for point in scatter_points:
+            subplt.scatter(point[0], point[1])
+            subplt.annotate('(%.4f, %.4f)' % (point[0], point[1]), xy=point)
 
 
-def draw_pr_curve(tag_list, rec_thresh, prec_thresh, output, title=None, min_precision=None):
+def set_subplot(subplt, xlabel, ylabel, title):
+    subplt.set_xlabel(xlabel)
+    subplt.set_ylabel(ylabel)
+    subplt.axis([0, 1.0, 0, 1.0])
+    subplt.grid()
+    subplt.legend(loc='best')
+    subplt.set_title(title)
+
+
+def draw_curves(tag_list, points, output, title, min_precision=None, min_recall=None):
+    """ point format: points[tag] = [(recall, precision, fpr, threshold), ...] """
     num_tags = len(tag_list)
     colormap = plt.cm.gist_ncar
-    plt.gca().set_color_cycle([colormap(i) for i in np.linspace(0, 0.9, num_tags)])
+
+    # plot roc and recall-precision curve
+    f, (roc, pr) = plt.subplots(1, 2, figsize=(15, 6))
+    roc.set_color_cycle([colormap(i) for i in np.linspace(0, 0.9, num_tags)])
+    pr.set_color_cycle([colormap(i) for i in np.linspace(0, 0.9, num_tags)])
+
     for tag in tag_list:
-        recall = rec_thresh[tag]
-        precision = prec_thresh[tag]
-        plt.plot(recall, precision, label=tag)
-        points = [(r, p) for r, p in zip(recall, precision)]
-        points = sorted(points, key = lambda p: p[0])
-        best_point = get_best_point(points, y_lower_bound=min_precision)
-        plt.scatter(best_point[0], best_point[1])
-        plt.annotate('(%.4f, %.4f)' % (best_point[0], best_point[1]), xy=best_point)
-    if title:
-        plt.title('Recall-Precision-' + title)
-    else:
-        plt.title('Recall-Precision')
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.axis([0, 1.0, 0, 1.0])
-    plt.grid()
-    plt.legend(loc='best')
-    plt.savefig(output, format='jpg')
-    plt.clf()
-    print('Save recall-precision curve to {}'.format(output))
+        rec = [p[0] for p in points[tag]]
+        prec = [p[1] for p in points[tag]]
+        fpr = [p[2] for p in points[tag]]
+        draw_one_curve(roc, fpr, rec, tag)
+        draw_one_curve(pr, rec, prec, tag)
+
+    set_subplot(roc, 'FPR', 'TPR', 'ROC Curve')
+    set_subplot(pr, 'Recall', 'Precision', 'Recall-Precision Curve')
+    f.suptitle(title)
+    f.savefig(output, format='jpg')
+    print('Save curves to {}'.format(output))
+
+
+def get_points(tag_list, recall, precision, fpr, thresh_step):
+    num_intervals = int(math.ceil(1 / float(args.step)))
+    points = {}
+    for tag in tag_list:
+        for rec, prec, fp, thresh_idx in zip(recall[tag], precision[tag], fpr[tag], range(1, num_intervals)):
+            if tag not in points.keys():
+                points[tag] = [(rec, prec, fp, thresh_idx * thresh_step)]
+            else:
+                points[tag].append((rec, prec, fp, thresh_idx * thresh_step))
+    return points
 
 
 def parse_args():
@@ -75,10 +74,10 @@ def parse_args():
                         help='Image ground truth list, in format im_name, tag_id, tag_name')
     parser.add_argument('--step', default=0.1, type=float,
                         help='Threshold step to filter')
-    parser.add_argument('--output-prefix', required=True,
-                        help='Output files prefix, files will be [output_prefix]_[pr/roc]_curve.jpg')
+    parser.add_argument('--output', required=True,
+                        help='Output file')
     parser.add_argument('--title', default=None,
-                        help='Output curve title suffix')
+                        help='Output curve title')
     parser.add_argument('--min-precision', default=None, type=float,
                         help='Min precision to find best performance point')
     parser.add_argument('--min-recall', default=None, type=float,
@@ -107,11 +106,11 @@ if __name__ == '__main__':
     print('Calculating recall(tpr), precision and fpr for all threshold step...')
     rec, prec, _ = f1_all_thresh(im_list, gt_dict, interval_step=args.step)
     fpr = false_positive_rate_all_thresh(im_list, gt_dict, num_gt, interval_step=args.step)
-    print('Drawing roc curve...')
-    draw_roc_curve(tag_list, rec, fpr, args.output_prefix+'_roc_curve.jpg', title=args.title, min_recall=args.min_recall)
-    print('Drawing recall-precision curve...')
-    draw_pr_curve(tag_list, rec, prec, args.output_prefix+'_pr_curve.jpg', title=args.title, min_precision=args.min_precision)
 
+    points = get_points(tag_list, rec, prec, fpr, args.step)
+    draw_curves(tag_list, points, args.output, args.title)
+
+    print('-----------------------------------------------------------------------------')
     num_intervals = int(math.ceil(1 / float(args.step)))
     for tag in rec.keys():
         points = [(r, p, f, thresh) for r, p, f, thresh in zip(rec[tag], prec[tag], fpr[tag], range(1, num_intervals))]
