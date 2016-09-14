@@ -6,7 +6,7 @@ import os, sys
 import argparse
 from split_data_by_tag import parse_line
 from evaluate_from_list import parse_gt_list
-from metrics_from_list import false_positive_rate_all_thresh, f1_all_thresh, get_best_point
+from metrics_from_list import false_positive_rate_all_thresh, f1_all_thresh, get_best_point, build_pred_dict, get_each_results
 import numpy as np
 import math
 
@@ -72,10 +72,12 @@ def parse_args():
                         help='Image results list, in format im_name, tag_name, tag_prob')
     parser.add_argument('--gt-list', required=True,
                         help='Image ground truth list, in format im_name, tag_id, tag_name')
-    parser.add_argument('--step', default=0.1, type=float,
+    parser.add_argument('--step', default=0.05, type=float,
                         help='Threshold step to filter')
-    parser.add_argument('--output', required=True,
-                        help='Output file')
+    parser.add_argument('--output-curve', required=True,
+                        help='Output curve file')
+    parser.add_argument('--output-list-prefix', default=None,
+                        help='Output prefix of detail results files, will output to [output_list_prefix]_[tag]_[threshold].[tp/fp/fn]')
     parser.add_argument('--title', default=None,
                         help='Output curve title')
     parser.add_argument('--min-precision', default=None, type=float,
@@ -104,18 +106,36 @@ if __name__ == '__main__':
     gt_dict = parse_gt_list(gt_list, tag_list)
 
     print('Calculating recall(tpr), precision and fpr for all threshold step...')
-    rec, prec, _ = f1_all_thresh(im_list, gt_dict, interval_step=args.step)
+    rec, prec, f1 = f1_all_thresh(im_list, gt_dict, interval_step=args.step)
     fpr = false_positive_rate_all_thresh(im_list, gt_dict, num_gt, interval_step=args.step)
 
     points = get_points(tag_list, rec, prec, fpr, args.step)
-    draw_curves(tag_list, points, args.output, args.title)
+    draw_curves(tag_list, points, args.output_curve, args.title)
 
     print('-----------------------------------------------------------------------------')
     num_intervals = int(math.ceil(1 / float(args.step)))
+    best_points = {}
     for tag in rec.keys():
-        points = [(r, p, f, thresh) for r, p, f, thresh in zip(rec[tag], prec[tag], fpr[tag], range(1, num_intervals))]
-        points = sorted(points, key = lambda p: p[0])
-        bp = get_best_point(points, y_lower_bound=args.min_precision)
-        print('{:<20}: recall: {:<20}, precision: {:<20}, fpr: {:<20}, threshold: {:<5}'.format(tag, bp[0], bp[1], bp[2], bp[3]*args.step))
+        points = [(r, p, f1_score, f, thresh) for r, p, f1_score, f, thresh in zip(rec[tag], prec[tag], f1[tag], fpr[tag], range(1, num_intervals))]
+        #points = sorted(points, key = lambda p: p[2] - 6*p[3])
+        points = sorted(points, key = lambda p: p[2])
+        bp = points[-1]
+        best_points[tag] = bp
+        print('{:<20}: recall: {:<15}, precision: {:<15}, f1: {:<15}, fpr: {:<15}, threshold: {:<5}'.format(tag, bp[0], bp[1], bp[2], bp[3], bp[4]*args.step))
 
+    # output tp, fp, fn results
+    if args.output_list_prefix:
+        for tag, point in best_points.items():
+            thresh = point[4]*args.step
+            pred_dict = build_pred_dict([tag], im_list, thresh)
+            tp, fp, fn = get_each_results(pred_dict, gt_dict)
+            with open(args.output_list_prefix+'_{}_{}.tp'.format(tag, thresh), 'w') as f:
+                for line in tp[tag]:
+                    f.write('{} {} \n'.format(line, tag))
+            with open(args.output_list_prefix+'_{}_{}.fp'.format(tag, thresh), 'w') as f:
+                for line in fp[tag]:
+                    f.write('{} {} \n'.format(line, tag))
+            with open(args.output_list_prefix+'_{}_{}.fn'.format(tag, thresh), 'w') as f:
+                for line in fn[tag]:
+                    f.write('{} {} \n'.format(line, tag))
 

@@ -107,7 +107,7 @@ def predict_worker(proc_id, output_file, classes, model_params, batch_size, que,
             print('Class {:<20}: recall: {:<12}, precsion: {:<12}, f1 score: {:<12}'.format(cls, rec, prec, f1))
             f.write('Class {:<20}: recall: {:<12}, precsion: {:<12}, f1 score: {:<12}\n'.format(cls, rec, prec, f1))
         topk_recall = recall_topk.get()
-        for rec, cls in zip(recall, classes):
+        for rec, cls in zip(topk_recall, classes):
             print('Class {:<20}: recall-top-5: {:<12}'.format(cls, rec))
             f.write('Class {:<20}: recall-top-5: {:<12}\n'.format(cls, rec))
 

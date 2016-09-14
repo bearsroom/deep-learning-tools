@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import argparse
+import random
 
 def create_symbol_link(src_dir, images, dst_root, classes, limit=1000, suffix=''):
     print('Destination: {}'.format(dst_root))
@@ -66,6 +67,7 @@ def parse_args():
     parser.add_argument('--suffix', dest='suffix',
                         help='Suffix of symbol links, ex: jpg, png',
                         default='', type=str)
+    parser.add_argument('--shuffle', action='store_true')
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -81,4 +83,6 @@ if __name__ == '__main__':
     classes = [c.split()[1] for c in classes]
     print(classes)
     images = parse_images_file(args.im_list, classes)
+    if args.shuffle:
+        random.shuffle(images)
     create_symbol_link(args.src_dir, images, args.dst_dir, classes, args.limit, args.suffix)

@@ -27,7 +27,7 @@ def get_tag_easy_samples(im_list, thresh=None, top_ratio=0.2):
 
 def get_hard_samples(im_list, min_max_ratio=0.2, margin_ratio=0.2, entropy_ratio=0.2):
     """ input format: (im_name, labels, probs), labels, probs for top-k predictions """
-    im_probs = np.array([im[-1] for im in im_list])
+    im_probs = np.array([im[-1] for im in im_list], dtype=np.float)
     indexes = np.empty((0, ), dtype=int)
     for ratio, sampling in zip((min_max_ratio, margin_ratio, entropy_ratio), (min_max_sampling, margin_sampling, entropy_sampling)):
         if ratio > 0:
@@ -112,6 +112,7 @@ if __name__ == '__main__':
     # parse result file
     im_list = open(args.im_list).read().splitlines()
     im_list = [parse_line(im) for im in im_list]
+    im_list = [im for im in im_list if im]
     print('Total {} images in dataset'.format(len(im_list)))
 
     generate_easy_samples(tag_list, im_list, args.output_prefix, topk=args.topk, top_ratio=args.easy_top_ratio, tag_thresh_list=tag_probs)

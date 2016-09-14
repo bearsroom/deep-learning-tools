@@ -21,6 +21,25 @@ def build_pred_dict(tag_list, pred_list, thresh):
     return pred_dict
 
 
+def get_each_results(pred_dict, gt_dict):
+    """ return tp, fp, fn list """
+    tp = {}
+    fp = {}
+    fn = {}
+    for tag, pred_list in pred_dict.items():
+        gt_list = gt_dict[tag]
+        tp[tag] = set(pred_list) & set(gt_list)
+        fp[tag] = []
+        for pred in pred_list:
+            if pred not in gt_list:
+                fp[tag].append(pred)
+        fn[tag] = []
+        for gt in gt_list:
+            if gt not in pred_list:
+                fn[tag].append(gt)
+    return tp, fp, fn
+
+
 def recall(pred_dict, gt_dict):
     """ calculate recall
         pred_dict format: key: tag_name, value: list of image name
@@ -63,7 +82,7 @@ def precsion(pred_dict, gt_dict):
         pred_list = pred_dict[tag]
         num_pred = len(set(pred_list))
         num_tp = len(set(pred_list) & set(gt_list))
-        prec[tag] = num_tp / float(num_pred)
+        prec[tag] = num_tp / float(num_pred) if num_pred > 0 else 0
     return prec
 
 
@@ -132,7 +151,7 @@ def f1(pred_dict, gt_dict):
         num_gt = len(set(gt_list))
         num_tp = len(set(pred_list) & set(gt_list))
         rec[tag] = num_tp / float(num_gt)
-        prec[tag] = num_tp / float(num_pred)
+        prec[tag] = num_tp / float(num_pred) if num_pred > 0 else 0
         if rec[tag] + prec[tag] > 0:
             f1[tag] = 2 * rec[tag] * prec[tag] / (rec[tag] + prec[tag])
         else:
